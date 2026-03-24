@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL Goods — Packaging Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════
+   RESET + BASE
+═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent: #9e2a2a;
+  --accent2: #c8a96e;
+  --bg: #0a0a0a;
+  --bg2: #111;
+  --bg3: #181818;
+  --border: #222;
+  --text: #e8e0d0;
+  --muted: #555;
+  --panel-w: 340px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════ */
+.topbar {
+  height: 52px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: var(--accent2);
+  line-height: 1;
+}
+
+.topbar-sep { width: 1px; height: 24px; background: var(--border); }
+
+.topbar-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 3px;
+}
+
+.topbar-spacer { flex: 1; }
+
+.btn-print {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--bg);
+  background: var(--accent2);
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-print:hover { opacity: 0.85; }
+
+/* ═══════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════ */
+.app {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 52px);
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR PANEL
+═══════════════════════════════════════ */
+.sidebar {
+  width: var(--panel-w);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 0 0 40px;
+}
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: var(--bg2); }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+.sb-section {
+  border-bottom: 1px solid var(--border);
+  padding: 18px 20px;
+}
+
+.sb-section-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sb-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--accent)33, transparent);
+}
+
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+
+.field label {
+  display: block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+}
+
+.field input[type="text"],
+.field textarea,
+.field select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+.field input[type="text"]:focus,
+.field textarea:focus,
+.field select:focus { border-color: var(--accent); }
+
+.field textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+.field select option { background: var(--bg3); }
+
+/* color row */
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.color-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.color-row input[type="text"] {
+  flex: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+}
+
+/* preset swatches */
+.swatches {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #333;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.swatch:hover { transform: scale(1.15); border-color: #666; }
+.swatch.active { border-color: var(--accent2) !important; outline: 1px solid var(--accent2); }
+
+/* badge toggle */
+.badge-toggles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.badge-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.badge-btn:hover { border-color: var(--accent); color: var(--text); }
+.badge-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.toggle-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+.toggle {
+  width: 36px;
+  height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--accent); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: left 0.2s;
+}
+.toggle.on::after { left: 19px; }
+
+/* ═══════════════════════════════════════
+   PREVIEW AREA
+═══════════════════════════════════════ */
+.preview-area {
+  flex: 1;
+  overflow: auto;
+  background: #141414;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  gap: 32px;
+}
+
+.preview-area::-webkit-scrollbar { width: 6px; }
+.preview-area::-webkit-scrollbar-track { background: #141414; }
+.preview-area::-webkit-scrollbar-thumb { background: #2a2a2a; }
+
+.preview-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #333;
+  align-self: flex-start;
+  margin-left: 8px;
+}
+
+/* ═══════════════════════════════════════
+   SHARED PACKAGING STYLES (preview)
+═══════════════════════════════════════ */
+
+.pkg-bgr {
+  position: absolute; top:0; left:0; right:0; bottom:0;
+  pointer-events: none;
+}
+
+.pkg-ctr { position:absolute; top:6px; right:6px; width:14px; height:14px; border-top:1px solid; border-right:1px solid; }
+.pkg-cbl { position:absolute; bottom:6px; left:6px; width:14px; height:14px; border-bottom:1px solid; border-left:1px solid; }
+
+.pkg-htf-tri {
+  position:absolute; top:0; right:0; width:0; height:0;
+  border-style:solid; border-width:0 40px 40px 0;
+}
+.pkg-htf-tri-txt {
+  position:absolute; top:7px; right:2px;
+  font-family:'Share Tech Mono',monospace; font-size:6px;
+  color:#e8e0d0cc; letter-spacing:1px;
+  transform:rotate(45deg); transform-origin:center;
+}
+
+/* ── INSERT CARD ── */
+.ic-wrap { position: relative; }
+.ic-preview {
+  width: 1.5in;
+  height: 2.5in;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ic-top-bar { height: 3px; width:100%; flex-shrink:0; }
+.ic-brand-blk { padding: 8px 10px 5px; flex-shrink:0; }
+.ic-brand-name { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:4px; line-height:1; }
+.ic-brand-sub  { font-family:'Share Tech Mono',monospace; font-size:5.5px; letter-spacing:2px; margin-top:2px; }
+.ic-divider    { height:1px; margin:0 10px; flex-shrink:0; }
+.ic-fig-area   { flex:1; display:flex; flex-direction:column; padding:6px 10px 3px; overflow:hidden; }
+.ic-item-line  { font-family:'Share Tech Mono',monospace; font-size:5.5px; letter-spacing:1.5px; margin-bottom:3px; }
+.ic-fig-name   { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:#e8e0d0; line-height:1; }
+.ic-fig-theme  { font-family:'Rajdhani',sans-serif; font-size:8.5px; font-weight:600; color:#555; letter-spacing:0.5px; margin-top:2px; }
+.ic-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  margin-top:5px; margin-bottom:6px;
+  border:1px solid; padding:2px 6px;
+  font-family:'Share Tech Mono',monospace; font-size:6px; letter-spacing:1.5px; font-weight:700;
+  width:fit-content;
+}
+.ic-badge::before { content:''; width:4px; height:4px; border-radius:50%; }
+.ic-set-div  { height:1px; margin:0 0 5px; flex-shrink:0; }
+.ic-set-lbl  { font-family:'Share Tech Mono',monospace; font-size:5.5px; letter-spacing:2px; margin-bottom:2px; }
+.ic-set-name { font-family:'Rajdhani',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.5px; line-height:1.3; }
+.ic-set-no   { font-family:'Share Tech Mono',monospace; font-size:5.5px; letter-spacing:1px; margin-top:1px; margin-bottom:5px; }
+.ic-bio      { font-family:'Rajdhani',sans-serif; font-size:8px; font-weight:500; color:#3a3a3a; letter-spacing:0.3px; line-height:1.5; }
+.ic-case-note { padding:0 10px; margin-bottom:4px; flex-shrink:0; }
+.ic-case-note p { font-family:'Rajdhani',sans-serif; font-size:7.5px; font-weight:500; color:#2a2a2a; letter-spacing:0.5px; text-transform:uppercase; border-top:1px solid #181818; padding-top:4px; line-height:1.4; }
+.ic-social-row { padding:3px 10px 7px; display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.ic-soc { font-family:'Share Tech Mono',monospace; font-size:5.5px; color:#2a2a2a; letter-spacing:1px; }
+.ic-dot { width:2px; height:2px; background:#222; border-radius:50%; }
+
+/* ── SLEEVE ── */
+.sl-preview {
+  width: 8.16in;
+  height: 2.72in;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.89in 1px 1.89in 1px 1.89in 1px 1.89in 1px 0.57in;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sl-sep-line { background:linear-gradient(to bottom, transparent, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.08) 70%, transparent); }
+.sl-panel-p  { display:flex; flex-direction:column; justify-content:center; padding:10px 13px; position:relative; }
+.sl-right-p  { display:flex; flex-direction:column; justify-content:space-between; padding:10px 12px; }
+
+.sl-htf-bar-p { position:absolute; top:0; left:0; right:0; height:3px; }
+.sl-htf-lbl-p { position:absolute; top:6px; left:14px; font-family:'Share Tech Mono',monospace; font-size:6px; letter-spacing:3px; }
+
+.sl-brand-p   { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:7px; color:#c8a96e; line-height:1; }
+.sl-tagline-p { font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px; margin-top:3px; }
+.sl-lbl-p     { font-family:'Share Tech Mono',monospace; font-size:6.5px; letter-spacing:2px; margin-bottom:2px; }
+.sl-fig-p     { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:3px; color:#e8e0d0; line-height:1; }
+.sl-theme-p   { font-family:'Rajdhani',sans-serif; font-size:9px; font-weight:500; color:#555; letter-spacing:1px; margin:2px 0 3px; }
+.sl-setrow-p  { font-family:'Share Tech Mono',monospace; font-size:6px; letter-spacing:1.5px; margin-bottom:5px; }
+.sl-feats-p   { display:flex; flex-direction:column; gap:3px; }
+.sl-feat-p    { display:flex; align-items:center; gap:5px; font-family:'Rajdhani',sans-serif; font-size:9px; font-weight:500; color:#444; }
+.sl-feat-p::before { content:''; width:3px; height:3px; border-radius:50%; flex-shrink:0; }
+.sl-cond-p {
+  display:inline-flex; align-items:center; gap:4px;
+  border:1px solid; padding:3px 7px; width:fit-content;
+  font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px; font-weight:700;
+}
+.sl-cond-p::before { content:''; width:4px; height:4px; border-radius:50%; }
+.sl-socs-p  { display:flex; flex-direction:column; gap:2px; }
+.sl-soc-p   { font-family:'Share Tech Mono',monospace; font-size:6.5px; color:#252525; letter-spacing:1px; }
+.sl-back-p  {
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:10px 6px; position:relative;
+}
+.sl-back-lbl-p {
+  font-family:'Share Tech Mono',monospace; font-size:6px; color:#1a1a1a;
+  letter-spacing:2px; text-align:center; line-height:2;
+}
+.sl-tab-p {
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:6px; border-left:1px dashed;
+}
+.sl-tab-lbl-p {
+  font-family:'Share Tech Mono',monospace; font-size:5.5px; color:#1a1a1a;
+  letter-spacing:1px; writing-mode:vertical-rl; text-align:center;
+}
+.sl-wm-p {
+  position:absolute; right:-14mm; top:50%;
+  transform:translateY(-50%) rotate(90deg);
+  font-family:'Bebas Neue',sans-serif; font-size:44px;
+  letter-spacing:10px; white-space:nowrap; opacity:0.03;
+}
+
+/* ═══════════════════════════════════════
+   PRINT STYLESHEET
+═══════════════════════════════════════ */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body { background: none; }
+  .topbar, .sidebar, .preview-area, .preview-label { display: none !important; }
+
+  .print-sheet {
+    display: block !important;
+    width: 8.5in;
+    height: 11in;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .print-ic {
+    position: absolute;
+    left: 0.5in; top: 0.5in;
+    width: 1.5in; height: 2.5in;
+  }
+  .print-cut-ic {
+    position: absolute;
+    left: 0.4in; top: 0.4in;
+    width: 1.7in; height: 2.7in;
+    border: 1px dashed rgba(158,42,42,0.4);
+  }
+  .print-cut-ic-lbl {
+    position: absolute;
+    left: 0.4in; top: 0.32in;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px; color: rgba(158,42,42,0.4); letter-spacing: 1px;
+  }
+
+  .print-sl {
+    position: absolute;
+    left: 0.17in; top: 4.6in;
+    width: 8.16in; height: 2.72in;
+  }
+  .print-cut-sl {
+    position: absolute;
+    left: 0.07in; top: 4.5in;
+    width: 8.36in; height: 2.92in;
+    border: 1px dashed rgba(158,42,42,0.4);
+  }
+  .print-cut-sl-lbl {
+    position: absolute;
+    left: 0.07in; top: 4.42in;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px; color: rgba(158,42,42,0.4); letter-spacing: 1px;
+  }
+  .print-score {
+    position: absolute;
+    width: 1px;
+    background: repeating-linear-gradient(to bottom, rgba(200,169,110,0.5) 0px, rgba(200,169,110,0.5) 4px, transparent 4px, transparent 8px);
+  }
+  .print-score-lbl {
+    position: absolute;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px; color: rgba(200,169,110,0.4); letter-spacing: 1px;
+    writing-mode: vertical-rl; white-space: nowrap;
+  }
+  .print-footer {
+    position: absolute;
+    bottom: 0.25in; right: 0.4in;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px; color: #1a1a1a; letter-spacing: 2px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="topbar-logo">RL GOODS</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">// PACKAGING GENERATOR</div>
+  <div class="topbar-spacer"></div>
+  <button class="btn-print" onclick="triggerPrint()">⌘ PRINT</button>
+</div>
+
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+
+  <!-- FIGURE INFO -->
+  <div class="sb-section">
+    <div class="sb-section-title">01 — FIGURE INFO</div>
+
+    <div class="field">
+      <label>Figure Name</label>
+      <input type="text" id="figName" value="Wes Janson" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Theme / Line</label>
+      <input type="text" id="figTheme" value="Star Wars · Rebel Alliance Pilot" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Item Number</label>
+      <input type="text" id="itemNo" value="sw0729" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Internal Ref # (e.g. HTF — 001)</label>
+      <input type="text" id="refNo" value="HTF — 001" oninput="update()">
+    </div>
+  </div>
+
+  <!-- SET INFO -->
+  <div class="sb-section">
+    <div class="sb-section-title">02 — SET INFO</div>
+
+    <div class="field">
+      <label>Set Name</label>
+      <input type="text" id="setName" value="Assault on Hoth — UCS" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Set Number</label>
+      <input type="text" id="setNo" value="75098-1" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Bio / Description</label>
+      <textarea id="bio" oninput="update()">Veteran Rebel pilot &amp; gunner. Served with Rogue Squadron at the Battle of Hoth. Exclusive to the UCS Assault on Hoth — never sold separately.</textarea>
+    </div>
+  </div>
+
+  <!-- BADGE / TYPE -->
+  <div class="sb-section">
+    <div class="sb-section-title">03 — BADGE TYPE</div>
+    <div class="badge-toggles">
+      <button class="badge-btn active" onclick="setBadge(this,'HARD TO FIND','// HARD TO FIND')">HTF</button>
+      <button class="badge-btn" onclick="setBadge(this,'COLLECTOR\'S PICK','// COLLECTOR\'S SELECTION')">COLLECTOR</button>
+      <button class="badge-btn" onclick="setBadge(this,'LICENSED THEME','// LICENSED COLLECTION')">LICENSED</button>
+      <button class="badge-btn" onclick="setBadge(this,'RETIRED THEME','// RETIRED SELECTION')">RETIRED</button>
+      <button class="badge-btn" onclick="setBadge(this,'GOOD CONDITION','// LEGO MINIFIGURES')">STANDARD</button>
+      <button class="badge-btn" onclick="setBadge(this,'BUNDLE PACK','// BUNDLE PACK')">BUNDLE</button>
+    </div>
+  </div>
+
+  <!-- SOCIALS -->
+  <div class="sb-section">
+    <div class="sb-section-title">04 — SOCIALS</div>
+    <div class="field">
+      <label>Facebook</label>
+      <input type="text" id="fbHandle" value="FB: RL Goods" oninput="update()">
+    </div>
+    <div class="field">
+      <label>Instagram</label>
+      <input type="text" id="igHandle" value="IG: @rlgoods" oninput="update()">
+    </div>
+  </div>
+
+  <!-- COLOURS -->
+  <div class="sb-section">
+    <div class="sb-section-title">05 — ACCENT COLOUR</div>
+
+    <div class="field">
+      <label>Primary Accent</label>
+      <div class="color-row">
+        <input type="color" id="colorPicker" value="#9e2a2a" oninput="onColorInput(this.value)">
+        <input type="text" id="colorHex" value="#9e2a2a" oninput="onHexInput(this.value)" maxlength="7">
+      </div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+
+    <div class="field">
+      <label>Gold / Brand Colour</label>
+      <div class="color-row">
+        <input type="color" id="goldPicker" value="#c8a96e" oninput="onGoldInput(this.value)">
+        <input type="text" id="goldHex" value="#c8a96e" oninput="onGoldHexInput(this.value)" maxlength="7">
+      </div>
+    </div>
+  </div>
+
+  <!-- TOGGLES -->
+  <div class="sb-section">
+    <div class="sb-section-title">06 — OPTIONS</div>
+    <div class="toggle-row">
+      <span class="toggle-label">SHOW HTF CORNER STAMP</span>
+      <div class="toggle on" id="togHTF" onclick="toggleOpt('togHTF','showHTF')"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">SHOW BIO TEXT</span>
+      <div class="toggle on" id="togBio" onclick="toggleOpt('togBio','showBio')"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">SHOW SET INFO</span>
+      <div class="toggle on" id="togSet" onclick="toggleOpt('togSet','showSet')"></div>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">SHOW CASE NOTE</span>
+      <div class="toggle on" id="togCase" onclick="toggleOpt('togCase','showCase')"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ PREVIEW AREA ═══ -->
+<div class="preview-area" id="previewArea">
+
+  <div class="preview-label">// INSERT CARD PREVIEW — 1.5 × 2.5 in</div>
+  <div class="ic-wrap" id="icWrap">
+    <!-- filled by JS -->
+  </div>
+
+  <div class="preview-label">// SLEEVE PREVIEW — 8.16 × 2.72 in (all 4 sides + tab)</div>
+  <div id="slWrap">
+    <!-- filled by JS -->
+  </div>
+
+</div>
+</div>
+
+<!-- ═══ PRINT SHEET (hidden, shown only at print) ═══ -->
+<div class="print-sheet" id="printSheet" style="display:none;">
+  <!-- filled by JS before printing -->
+</div>
+
+<script>
+
+/* ── STATE ── */
+const state = {
+  figName:  'Wes Janson',
+  figTheme: 'Star Wars · Rebel Alliance Pilot',
+  itemNo:   'sw0729',
+  refNo:    'HTF — 001',
+  setName:  'Assault on Hoth — UCS',
+  setNo:    '75098-1',
+  bio:      'Veteran Rebel pilot & gunner. Served with Rogue Squadron at the Battle of Hoth. Exclusive to the UCS Assault on Hoth — never sold separately.',
+  badge:    'HARD TO FIND',
+  tagline:  '// HARD TO FIND',
+  fb:       'FB: RL Goods',
+  ig:       'IG: @rlgoods',
+  accent:   '#9e2a2a',
+  gold:     '#c8a96e',
+  showHTF:  true,
+  showBio:  true,
+  showSet:  true,
+  showCase: true,
+};
+
+/* ── PRESETS ── */
+const PRESETS = [
+  { color: '#9e2a2a', label: 'HTF Red' },
+  { color: '#1e4a7a', label: 'Licensed Blue' },
+  { color: '#888888', label: 'Retired Silver' },
+  { color: '#3a6b1a', label: 'Classic Green' },
+  { color: '#6a3a8a', label: 'Exclusive Purple' },
+  { color: '#1a5a5a', label: 'Teal' },
+  { color: '#7a4a1a', label: 'Bronze' },
+  { color: '#4a1a1a', label: 'Dark Red' },
+];
+
+function buildSwatches() {
+  const container = document.getElementById('swatches');
+  PRESETS.forEach((p, i) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (i === 0 ? ' active' : '');
+    s.style.background = p.color;
+    s.title = p.label;
+    s.onclick = () => {
+      document.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      applyAccent(p.color);
+    };
+    container.appendChild(s);
+  });
+}
+
+/* ── COLOR HELPERS ── */
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+function hexAlpha(hex, a) {
+  const {r,g,b} = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function applyAccent(hex) {
+  state.accent = hex;
+  document.getElementById('colorPicker').value = hex;
+  document.getElementById('colorHex').value = hex;
+  update();
+}
+function onColorInput(v) {
+  document.getElementById('colorHex').value = v;
+  state.accent = v;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  update();
+}
+function onHexInput(v) {
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    state.accent = v;
+    document.getElementById('colorPicker').value = v;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    update();
+  }
+}
+function onGoldInput(v) {
+  state.gold = v;
+  document.getElementById('goldHex').value = v;
+  update();
+}
+function onGoldHexInput(v) {
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    state.gold = v;
+    document.getElementById('goldPicker').value = v;
+    update();
+  }
+}
+
+/* ── BADGE ── */
+function setBadge(btn, badge, tagline) {
+  state.badge = badge;
+  state.tagline = tagline;
+  document.querySelectorAll('.badge-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  update();
+}
+
+/* ── TOGGLES ── */
+function toggleOpt(toggleId, stateKey) {
+  state[stateKey] = !state[stateKey];
+  const el = document.getElementById(toggleId);
+  el.classList.toggle('on', state[stateKey]);
+  update();
+}
+
+/* ── READ INPUTS ── */
+function readInputs() {
+  state.figName  = document.getElementById('figName').value;
+  state.figTheme = document.getElementById('figTheme').value;
+  state.itemNo   = document.getElementById('itemNo').value;
+  state.refNo    = document.getElementById('refNo').value;
+  state.setName  = document.getElementById('setName').value;
+  state.setNo    = document.getElementById('setNo').value;
+  state.bio      = document.getElementById('bio').value;
+  state.fb       = document.getElementById('fbHandle').value;
+  state.ig       = document.getElementById('igHandle').value;
+}
+
+function update() {
+  readInputs();
+  renderInsertCard(document.getElementById('icWrap'));
+  renderSleeve(document.getElementById('slWrap'));
+}
+
+/* ══════════════════════════════════════
+   INSERT CARD RENDERER
+══════════════════════════════════════ */
+function renderInsertCard(container) {
+  const a = state.accent;
+  const g = state.gold;
+  const badgeIsHTF = state.badge === 'HARD TO FIND';
+
+  container.innerHTML = `
+    <div class="ic-preview" style="background:#0c0c0c; border:1px solid ${hexAlpha(a,0.3)};">
+      <div class="pkg-bgr" style="background-image:linear-gradient(${hexAlpha(a,0.05)} 1px,transparent 1px),linear-gradient(90deg,${hexAlpha(a,0.05)} 1px,transparent 1px);background-size:9mm 9mm;"></div>
+      <div class="ic-top-bar" style="background:${a};"></div>
+      ${state.showHTF ? `
+        <div class="pkg-htf-tri" style="border-color:transparent ${a} transparent transparent;"></div>
+        <div class="pkg-htf-tri-txt">${badgeIsHTF ? 'HTF' : '★'}</div>
+      ` : ''}
+      <div class="pkg-ctr" style="border-color:${hexAlpha(a,0.35)};"></div>
+      <div class="pkg-cbl" style="border-color:${hexAlpha(a,0.35)};"></div>
+
+      <div class="ic-brand-blk">
+        <div class="ic-brand-name" style="color:${g};">RL GOODS</div>
+        <div class="ic-brand-sub" style="color:${hexAlpha(a,0.6)};">${state.tagline}</div>
+      </div>
+
+      <div class="ic-divider" style="background:linear-gradient(to right,${hexAlpha(a,0.35)},transparent);"></div>
+
+      <div class="ic-fig-area">
+        <div class="ic-item-line" style="color:${hexAlpha(a,0.7)};">// ${state.refNo} &nbsp;·&nbsp; ITEM: ${state.itemNo}</div>
+        <div class="ic-fig-name">${state.figName}</div>
+        <div class="ic-fig-theme">${state.figTheme}</div>
+        <div class="ic-badge" style="background:${hexAlpha(a,0.15)};border-color:${hexAlpha(a,0.6)};color:${a};">
+          <span style="width:4px;height:4px;background:${a};border-radius:50%;display:inline-block;"></span>
+          ${state.badge}
+        </div>
+
+        ${state.showSet ? `
+          <div class="ic-set-div" style="background:#1c1c1c;"></div>
+          <div class="ic-set-lbl" style="color:${hexAlpha(a,0.55)};">// APPEARED IN SET</div>
+          <div class="ic-set-name" style="color:${hexAlpha(a,0.55)};">${state.setName}</div>
+          <div class="ic-set-no" style="color:#333;">Set No: ${state.setNo}</div>
+        ` : ''}
+
+        ${state.showBio ? `
+          <div class="ic-bio">${state.bio}</div>
+        ` : ''}
+      </div>
+
+      ${state.showCase ? `
+        <div class="ic-case-note">
+          <p>Includes light-compatible acrylic display case</p>
+        </div>
+      ` : ''}
+      <div class="ic-social-row">
+        <span class="ic-soc">${state.fb}</span>
+        <span class="ic-dot"></span>
+        <span class="ic-soc">${state.ig}</span>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════
+   SLEEVE RENDERER
+══════════════════════════════════════ */
+function renderSleeve(container) {
+  const a = state.accent;
+  const g = state.gold;
+
+  container.innerHTML = `
+    <div class="sl-preview" style="background:#0c0c0c; border:1px solid ${hexAlpha(a,0.3)};">
+      <div class="pkg-bgr" style="background-image:linear-gradient(${hexAlpha(a,0.04)} 1px,transparent 1px),linear-gradient(90deg,${hexAlpha(a,0.04)} 1px,transparent 1px);background-size:9mm 9mm;"></div>
+      <div class="sl-htf-bar-p" style="background:linear-gradient(to right,${a},transparent);"></div>
+      <div class="sl-htf-lbl-p" style="color:${hexAlpha(a,0.5)};">${state.tagline.replace('//','').trim()}</div>
+      <div class="sl-wm-p" style="color:${a};">${state.figName.toUpperCase()}</div>
+
+      <!-- BACK PANEL -->
+      <div class="sl-back-p" style="border-right:1px dashed ${hexAlpha(a,0.2)};">
+        <div class="sl-back-lbl-p">BACK PANEL<br>TAPE HERE</div>
+      </div>
+
+      <div class="sl-sep-line"></div>
+
+      <!-- LEFT: RL GOODS -->
+      <div class="sl-panel-p" style="padding-top:18px;">
+        <div class="sl-brand-p" style="color:${g};">RL<br>GOODS</div>
+        <div class="sl-tagline-p" style="color:${hexAlpha(a,0.6)};">${state.tagline}</div>
+      </div>
+
+      <div class="sl-sep-line"></div>
+
+      <!-- FRONT: fig info -->
+      <div class="sl-panel-p" style="padding-top:18px;">
+        <div class="sl-lbl-p" style="color:${hexAlpha(a,0.6)};">// ITEM NO: ${state.itemNo}</div>
+        <div class="sl-fig-p">${state.figName}</div>
+        <div class="sl-theme-p">${state.figTheme}</div>
+        ${state.showSet ? `<div class="sl-setrow-p" style="color:${hexAlpha(a,0.45)};">${state.setName} · Set ${state.setNo}</div>` : ''}
+        <div class="sl-feats-p">
+          ${state.showSet ? `<div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;"></span>UCS exclusive — never sold separately</div>` : ''}
+          ${state.showCase ? `<div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;"></span>Light-compatible acrylic display case</div>` : ''}
+          <div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;"></span>Hand-inspected before sale</div>
+        </div>
+      </div>
+
+      <div class="sl-sep-line"></div>
+
+      <!-- RIGHT: badge + socials -->
+      <div class="sl-right-p" style="padding-top:18px;">
+        <div class="sl-cond-p" style="background:${hexAlpha(a,0.15)};border-color:${hexAlpha(a,0.55)};color:${a};">
+          <span style="width:4px;height:4px;background:${a};border-radius:50%;"></span>
+          ${state.badge.split(' ')[0]}
+        </div>
+        <div class="sl-socs-p">
+          <div class="sl-soc-p">${state.fb}</div>
+          <div class="sl-soc-p">${state.ig}</div>
+        </div>
+      </div>
+
+      <!-- TAB -->
+      <div class="sl-tab-p" style="background:#0a0a0a;border-color:${hexAlpha(a,0.4)};">
+        <div class="sl-tab-lbl-p">OVERLAP · TAPE</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════
+   PRINT
+══════════════════════════════════════ */
+function triggerPrint() {
+  buildPrintSheet();
+  window.print();
+}
+
+function buildPrintSheet() {
+  const a = state.accent;
+  const g = state.gold;
+  const sheet = document.getElementById('printSheet');
+
+  // Build the same markup but with absolute-positioned print classes
+  const icHTML = `
+    <div class="print-ic ic-preview" style="background:#0c0c0c;border:1px solid ${hexAlpha(a,0.3)};">
+      <div class="pkg-bgr" style="background-image:linear-gradient(${hexAlpha(a,0.05)} 1px,transparent 1px),linear-gradient(90deg,${hexAlpha(a,0.05)} 1px,transparent 1px);background-size:9mm 9mm;"></div>
+      <div class="ic-top-bar" style="background:${a};"></div>
+      ${state.showHTF ? `<div class="pkg-htf-tri" style="border-color:transparent ${a} transparent transparent;"></div><div class="pkg-htf-tri-txt">${state.badge==='HARD TO FIND'?'HTF':'★'}</div>` : ''}
+      <div class="pkg-ctr" style="border-color:${hexAlpha(a,0.35)};"></div>
+      <div class="pkg-cbl" style="border-color:${hexAlpha(a,0.35)};"></div>
+      <div class="ic-brand-blk">
+        <div class="ic-brand-name" style="color:${g};">RL GOODS</div>
+        <div class="ic-brand-sub" style="color:${hexAlpha(a,0.6)};">${state.tagline}</div>
+      </div>
+      <div class="ic-divider" style="background:linear-gradient(to right,${hexAlpha(a,0.35)},transparent);"></div>
+      <div class="ic-fig-area">
+        <div class="ic-item-line" style="color:${hexAlpha(a,0.7)};">// ${state.refNo} &nbsp;·&nbsp; ITEM: ${state.itemNo}</div>
+        <div class="ic-fig-name">${state.figName}</div>
+        <div class="ic-fig-theme">${state.figTheme}</div>
+        <div class="ic-badge" style="background:${hexAlpha(a,0.15)};border-color:${hexAlpha(a,0.6)};color:${a};"><span style="width:4px;height:4px;background:${a};border-radius:50%;display:inline-block;"></span>${state.badge}</div>
+        ${state.showSet?`<div class="ic-set-div" style="background:#1c1c1c;"></div><div class="ic-set-lbl" style="color:${hexAlpha(a,0.55)};">// APPEARED IN SET</div><div class="ic-set-name" style="color:${hexAlpha(a,0.55)};">${state.setName}</div><div class="ic-set-no" style="color:#333;">Set No: ${state.setNo}</div>`:''}
+        ${state.showBio?`<div class="ic-bio">${state.bio}</div>`:''}
+      </div>
+      ${state.showCase?`<div class="ic-case-note"><p>Includes light-compatible acrylic display case</p></div>`:''}
+      <div class="ic-social-row"><span class="ic-soc">${state.fb}</span><span class="ic-dot"></span><span class="ic-soc">${state.ig}</span></div>
+    </div>
+  `;
+
+  const slHTML = `
+    <div class="print-sl sl-preview" style="background:#0c0c0c;border:1px solid ${hexAlpha(a,0.3)};">
+      <div class="pkg-bgr" style="background-image:linear-gradient(${hexAlpha(a,0.04)} 1px,transparent 1px),linear-gradient(90deg,${hexAlpha(a,0.04)} 1px,transparent 1px);background-size:9mm 9mm;"></div>
+      <div class="sl-htf-bar-p" style="background:linear-gradient(to right,${a},transparent);"></div>
+      <div class="sl-htf-lbl-p" style="color:${hexAlpha(a,0.5)};">${state.tagline.replace('//','').trim()}</div>
+      <div class="sl-wm-p" style="color:${a};">${state.figName.toUpperCase()}</div>
+      <div class="sl-back-p" style="border-right:1px dashed ${hexAlpha(a,0.2)};"><div class="sl-back-lbl-p">BACK PANEL<br>TAPE HERE</div></div>
+      <div class="sl-sep-line"></div>
+      <div class="sl-panel-p" style="padding-top:18px;"><div class="sl-brand-p" style="color:${g};">RL<br>GOODS</div><div class="sl-tagline-p" style="color:${hexAlpha(a,0.6)};">${state.tagline}</div></div>
+      <div class="sl-sep-line"></div>
+      <div class="sl-panel-p" style="padding-top:18px;">
+        <div class="sl-lbl-p" style="color:${hexAlpha(a,0.6)};">// ITEM NO: ${state.itemNo}</div>
+        <div class="sl-fig-p">${state.figName}</div>
+        <div class="sl-theme-p">${state.figTheme}</div>
+        ${state.showSet?`<div class="sl-setrow-p" style="color:${hexAlpha(a,0.45)};">${state.setName} · Set ${state.setNo}</div>`:''}
+        <div class="sl-feats-p">
+          ${state.showSet?`<div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;display:inline-block;margin-right:5px;"></span>UCS exclusive — never sold separately</div>`:''}
+          ${state.showCase?`<div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;display:inline-block;margin-right:5px;"></span>Light-compatible acrylic display case</div>`:''}
+          <div class="sl-feat-p" style="color:#3a3a3a;"><span style="width:3px;height:3px;background:${a};border-radius:50%;flex-shrink:0;display:inline-block;margin-right:5px;"></span>Hand-inspected before sale</div>
+        </div>
+      </div>
+      <div class="sl-sep-line"></div>
+      <div class="sl-right-p" style="padding-top:18px;">
+        <div class="sl-cond-p" style="background:${hexAlpha(a,0.15)};border-color:${hexAlpha(a,0.55)};color:${a};"><span style="width:4px;height:4px;background:${a};border-radius:50%;display:inline-block;"></span>${state.badge.split(' ')[0]}</div>
+        <div class="sl-socs-p"><div class="sl-soc-p">${state.fb}</div><div class="sl-soc-p">${state.ig}</div></div>
+      </div>
+      <div class="sl-tab-p" style="background:#0a0a0a;border-color:${hexAlpha(a,0.4)};"><div class="sl-tab-lbl-p">OVERLAP · TAPE</div></div>
+    </div>
+  `;
+
+  sheet.innerHTML = `
+    ${icHTML}
+    <div class="print-cut-ic"></div>
+    <div class="print-cut-ic-lbl">CUT LINE — INSERT CARD (1.5 × 2.5 in)</div>
+    ${slHTML}
+    <div class="print-cut-sl"></div>
+    <div class="print-cut-sl-lbl">CUT LINE — SLEEVE (wraps all 4 sides of case)</div>
+    <div class="print-score" style="left:2.06in;top:4.5in;height:2.92in;"></div>
+    <div class="print-score-lbl" style="left:2.09in;top:4.55in;">FOLD</div>
+    <div class="print-score" style="left:3.95in;top:4.5in;height:2.92in;"></div>
+    <div class="print-score-lbl" style="left:3.98in;top:4.55in;">FOLD</div>
+    <div class="print-score" style="left:5.84in;top:4.5in;height:2.92in;"></div>
+    <div class="print-score-lbl" style="left:5.87in;top:4.55in;">FOLD</div>
+    <div class="print-score" style="left:7.73in;top:4.5in;height:2.92in;"></div>
+    <div class="print-score-lbl" style="left:7.76in;top:4.55in;">TAB</div>
+    <div class="print-footer">RL GOODS · ${state.figName.toUpperCase()} · ${state.itemNo}</div>
+  `;
+}
+
+/* ── INIT ── */
+buildSwatches();
+update();
+
+</script>
+</body>
+</html>
